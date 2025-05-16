@@ -1,15 +1,14 @@
-
 import os
 import telebot
-from pytube import YouTube
 from telebot import types
+import yt_dlp
 
-TOKEN = TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "أهلًا بيك في بوت تحميل يوتيوب!\nأرسل رابط فيديو من يوتيوب وسأعطيك خيارات التحميل.")
+    bot.reply_to(message, "أهلًا بيك في بوت تحميل يوتيوب! أرسل رابط فيديو وسأعطيك خيارات التحميل.")
 
 @bot.message_handler(func=lambda message: "youtube.com" in message.text or "youtu.be" in message.text)
 def handle_youtube_link(message):
@@ -26,23 +25,25 @@ def callback_query(call):
     chat_id = call.message.chat.id
 
     try:
-        yt = YouTube(url)
-        if data == "video":
-            bot.send_message(chat_id, "جاري تحميل الفيديو...")
-            stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
-        else:
-            bot.send_message(chat_id, "جاري تحميل الصوت...")
-            stream = yt.streams.filter(only_audio=True).first()
+        ydl_opts = {
+            'outtmpl': '%(title)s.%(ext)s',
+            'format': 'bestaudio/best' if data == "audio" else 'best',
+            'quiet': True
+        }
 
-        file_path = stream.download(filename_prefix="nexttube_")
-        with open(file_path, 'rb') as f:
-            if data == "video":
-                bot.send_video(chat_id, f)
-            else:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            file_name = ydl.prepare_filename(info)
+
+        with open(file_name, 'rb') as f:
+            if data == "audio":
                 bot.send_audio(chat_id, f)
+            else:
+                bot.send_video(chat_id, f)
 
-        os.remove(file_path)
+        os.remove(file_name)
+
     except Exception as e:
-        bot.send_message(chat_id, f"حدث خطأ: {e}")
+        bot.send_message(chat_id, f"حدث خطأ أثناء التحميل: {e}")
 
 bot.polling()
