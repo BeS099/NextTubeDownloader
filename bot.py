@@ -4,7 +4,7 @@ import telebot
 from pytube import YouTube
 from telebot import types
 
-TOKEN = TOKEN = "7948704852:AAF6taVJa2NgYgxjp02GfgolTKx5x4DiXL4"
+TOKEN = TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
